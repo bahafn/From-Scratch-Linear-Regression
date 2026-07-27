@@ -1,15 +1,25 @@
+#include "matrix.h"
+
 #include <stddef.h>
 
 typedef struct {
-    double  intercept;
-    double *weights;
+    Matrix  feature_matrix;
+    double *target_vector;
+} DataSet;
 
-    size_t weights_count;
+DataSet create_dataset(size_t samples, size_t features,
+                       double (*feature_matrix)[features],
+                       double *target_vector);
+void destroy_dataset(DataSet *dataset);
+
+typedef struct {
+    // First element of this is the intercept and the other elements are the weights of each feature
+    double *parameters;
+    size_t parameters_count;
 } Linear_Regression_Model;
 
-Linear_Regression_Model train_model(size_t rows, size_t cols,
-                                    const double (*x)[cols],
-                                    const double *y);
-double predict(size_t cols, const double x[cols], const Linear_Regression_Model *model);
+Linear_Regression_Model train_model(const DataSet *dataset);
+double predict(const double *x, const Linear_Regression_Model *model);
 
 void print_model(Linear_Regression_Model *model);
+void destroy_model(Linear_Regression_Model *model);

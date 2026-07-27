@@ -8,7 +8,8 @@ typedef struct {
     double *data;
 } Matrix;
 
-Matrix create_matrix(size_t rows, size_t cols);
+Matrix create_empty_matrix(size_t rows, size_t cols);
+Matrix create_matrix(size_t rows, size_t cols, const double (*data)[cols]);
 void   destroy_matrix(Matrix *m);
 void   print_matrix(const Matrix *m);
 

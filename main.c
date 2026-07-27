@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "linear_regression.h"
-#include "matrix.h"
 
 int main() {
     double x[8][3] = {
@@ -26,9 +26,14 @@ int main() {
         240000
     };
 
-    Linear_Regression_Model model = train_model(8, 3, x, y);
+    DataSet dataset = create_dataset(8, 3, x, y);
+
+    Linear_Regression_Model model = train_model(&dataset);
     print_model(&model);
 
     double x_predict[] = { 2200, 3, 21 };
-    printf("Price estimated: %f\n", predict(3, x_predict, &model));
+    printf("Price estimated: %f\n", predict(x_predict, &model));
+
+    destroy_dataset(&dataset);
+    free(model.parameters);
 }

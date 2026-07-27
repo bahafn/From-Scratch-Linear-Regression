@@ -4,10 +4,11 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 // TODO: Fix using asserts for error handling.
 
-Matrix create_matrix(size_t rows, size_t cols) {
+Matrix create_empty_matrix(size_t rows, size_t cols) {
     Matrix m;
     m.rows = rows;
     m.cols = cols;
@@ -17,10 +18,28 @@ Matrix create_matrix(size_t rows, size_t cols) {
     return m;
 }
 
+Matrix create_matrix(size_t rows, size_t cols, const double (*data)[cols]) {
+    Matrix m;
+    m.rows = rows;
+    m.cols = cols;
+
+    m.data = malloc(sizeof(*m.data) * rows * cols);
+
+    if (data == NULL) {
+        m.rows = 0;
+        m.cols = 0;
+        return m;
+    }
+
+    memcpy(m.data, data, rows * cols * sizeof(double));
+    return m;
+}
+
 void destroy_matrix(Matrix *m) {
     m->rows = 0;
     m->cols = 0;
     free(m->data);
+    m->data = NULL;
 }
 
 void print_matrix(const Matrix *m) {
@@ -36,7 +55,7 @@ void print_matrix(const Matrix *m) {
 }
 
 Matrix matrix_transpose(const Matrix *m) {
-    Matrix result = create_matrix(m->cols, m->rows);
+    Matrix result = create_empty_matrix(m->cols, m->rows);
 
     for (size_t i = 0; i < m->rows; i++) {
         for (size_t j = 0; j < m->cols; j++) {
@@ -50,7 +69,7 @@ Matrix matrix_transpose(const Matrix *m) {
 Matrix matrix_multiply(const Matrix *m1, const Matrix *m2) {
     assert(m1->cols == m2->rows && "m1 and m2 can't be multiplied");
 
-    Matrix result = create_matrix(m1->rows, m2->cols);
+    Matrix result = create_empty_matrix(m1->rows, m2->cols);
 
     for (size_t i = 0; i < m1->rows; i++) {
         for (size_t j = 0; j < m2->cols; j++) {
@@ -68,7 +87,7 @@ Matrix matrix_multiply(const Matrix *m1, const Matrix *m2) {
 }
 
 double *matrix_vector_multiply(const Matrix *m, const double *v) {
-    double *result = malloc(m->rows * sizeof(*result));
+    double *result = calloc(m->rows, sizeof(*result));
 
     if (result == NULL) {
         return NULL;
@@ -102,7 +121,7 @@ bool solve_linear_system(const Matrix *A, const double *b, double *x) {
     }
 
     size_t n = A->rows;
-    Matrix aug = create_matrix(n, n + 1);
+    Matrix aug = create_empty_matrix(n, n + 1);
 
     // Create augmented matrix [A | b]
     for (size_t i = 0; i < n; i++) {
