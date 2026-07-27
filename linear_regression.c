@@ -21,44 +21,51 @@ void destroy_dataset(DataSet *dataset) {
     dataset->target_vector = NULL;
 }
 
-// Adds a column at the start of a 2d array (destination[i][0] to all ones for use in
-// calculating the bias during linear regression calculations.
-// TODO: Clean up this function (doesn't make sense to take source as 2d array and destination as 1d, maybe make destination as a matrix)
-static void add_bias_column(size_t rows, size_t cols,
-                            const double *source,
-                            double *destination) {
+static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) {
+    size_t rows = dataset->feature_matrix.rows;
+    size_t cols = dataset->feature_matrix.cols;
 
-    size_t d_cols = cols + 1;
+    size_t a_cols = cols + 1;
 
-    for (size_t i = 0; i < rows; i++) {
-        size_t index = i * d_cols;
-        destination[index] = 1.0;
-        memcpy(&destination[index + 1], &source[i * cols], sizeof(double) * cols);
+    const double *x = dataset->feature_matrix.data;
+    const double *y = dataset->target_vector;
+
+    for (size_t row = 0; row < rows; row++) {
+        const double *sample = &x[row * cols];
+        b[0] += y[row];
+
+        for (size_t i = 0; i < cols; i++) {
+            b[i + 1] += sample[i] * y[row];
+        }
+
+        a->data[0] += 1.0;
+        for (size_t i = 0; i < cols; i++) {
+            a->data[i + 1] += sample[i];
+            a->data[(i + 1) * a_cols] += sample[i];
+
+            for (size_t j = 0; j < cols; j++) {
+                a->data[(i + 1) * a_cols + (j + 1)] += sample[i] * sample[j];
+            }
+        }
     }
 }
 
 Linear_Regression_Model train_model(const DataSet *dataset) {
-    size_t rows = dataset->feature_matrix.rows;
     size_t cols = dataset->feature_matrix.cols;
 
-    Matrix xb = create_empty_matrix(rows, cols + 1); // Matrix from x with a bias column
-    add_bias_column(rows, cols, dataset->feature_matrix.data, xb.data);
+    Matrix a = create_empty_matrix(cols + 1, cols + 1);
+    double *b = calloc(cols + 1, sizeof(*b));
 
-    Matrix x_transpose = matrix_transpose(&xb);
-
-    Matrix  a = matrix_multiply(&x_transpose, &xb);
-    double *b = matrix_vector_multiply(&x_transpose, dataset->target_vector);
+    build_normal_equation(dataset, &a, b);
 
     double *result_vector = malloc((cols + 1) * sizeof(*result_vector));
     solve_linear_system(&a, b, result_vector);
 
-    destroy_matrix(&xb);
-    destroy_matrix(&x_transpose);
     destroy_matrix(&a);
     free(b);
 
     Linear_Regression_Model model;
-    model.parameters       = result_vector;
+    model.parameters = result_vector;
     model.parameters_count = cols + 1;
 
     return model;
