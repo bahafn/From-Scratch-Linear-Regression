@@ -13,7 +13,12 @@ Matrix create_empty_matrix(size_t rows, size_t cols) {
     m.rows = rows;
     m.cols = cols;
 
-    m.data = malloc(sizeof(*m.data) * rows * cols);
+    m.data = calloc(sizeof(*m.data), rows * cols);
+    if (!m.data) {
+        m.rows = 0;
+        m.cols = 0;
+        return m;
+    }
 
     return m;
 }
@@ -24,7 +29,6 @@ Matrix create_matrix(size_t rows, size_t cols, const double (*data)[cols]) {
     m.cols = cols;
 
     m.data = malloc(sizeof(*m.data) * rows * cols);
-
     if (data == NULL) {
         m.rows = 0;
         m.cols = 0;

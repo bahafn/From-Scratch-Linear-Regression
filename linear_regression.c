@@ -51,6 +51,8 @@ static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) 
 }
 
 Linear_Regression_Model train_model(const DataSet *dataset) {
+    Linear_Regression_Model model;
+
     size_t cols = dataset->feature_matrix.cols;
 
     Matrix a = create_empty_matrix(cols + 1, cols + 1);
@@ -59,12 +61,16 @@ Linear_Regression_Model train_model(const DataSet *dataset) {
     build_normal_equation(dataset, &a, b);
 
     double *result_vector = malloc((cols + 1) * sizeof(*result_vector));
+    if (!result_vector) {
+        perror("Failed to allocate result_vector array");
+        return model;
+    }
+
     solve_linear_system(&a, b, result_vector);
 
     destroy_matrix(&a);
     free(b);
 
-    Linear_Regression_Model model;
     model.parameters = result_vector;
     model.parameters_count = cols + 1;
 
