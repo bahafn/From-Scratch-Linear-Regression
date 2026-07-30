@@ -16,9 +16,78 @@ DataSet create_dataset(size_t samples, size_t features,
     return dataset;
 }
 
+void init_dataset(DataSet *dataset, size_t samples, size_t features) {
+    dataset->feature_matrix = create_empty_matrix(samples, features);
+    dataset->target_vector  = malloc(samples * sizeof(*dataset->target_vector));
+}
+
 void destroy_dataset(DataSet *dataset) {
-    destroy_matrix(&dataset->feature_matrix);
-    dataset->target_vector = NULL;
+    if (dataset) {
+        destroy_matrix(&dataset->feature_matrix);
+        free(dataset->target_vector);
+        dataset->target_vector = NULL;
+    }
+}
+
+#define MAX_LINE_LENGTH 65536
+
+// TODO: This currently reads the file twice to get the number of rows and cols 
+//       and then adds the data. Check if there is a better way.
+DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
+    FILE *file = fopen(file_path, "r");
+    if (!file) {
+        fprintf(stderr, "Failed to open file at %s", file_path);
+        return NULL;
+    }
+
+    char line_buffer[MAX_LINE_LENGTH];
+    size_t file_rows = 0;
+    size_t file_cols = 0;
+
+    // Count number of cols from the first line
+    if (fgets(line_buffer, sizeof(line_buffer), file)) {
+        file_rows++;
+
+        char *ptr = line_buffer;
+        while (*ptr) {
+            if (*ptr == ',') {
+                file_cols++;
+            }
+
+            ptr++;
+        }
+    }
+
+    // Count number of rows in first pass
+    while (fgets(line_buffer, sizeof(line_buffer), file)) {
+        file_rows++;
+    }
+
+    rewind(file);
+    DataSet *dataset = malloc(sizeof(DataSet));
+    init_dataset(dataset, file_rows, file_cols);
+
+    size_t row = 0;
+    size_t dataset_index = 0;
+    while (fgets(line_buffer, sizeof(line_buffer), file)) {
+        char *token = strtok(line_buffer, ",");
+
+        for (size_t col = 0; col <= file_cols; col++) {
+            if (col != target_column_index) {
+                // NOTE: Currently we assume everything in the file is a number, will change later.
+                dataset->feature_matrix.data[dataset_index++] = strtod(token, NULL);
+            } else {
+                dataset->target_vector[row] = strtod(token, NULL);
+            }
+
+            token = strtok(NULL, ",");
+        }
+
+        row++;
+    }
+
+    fclose(file);
+    return dataset;
 }
 
 static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) {
