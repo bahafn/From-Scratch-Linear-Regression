@@ -19,10 +19,10 @@ double *matrix_vector_multiply(const Matrix *m, const double *v);
 
 bool solve_linear_system(const Matrix *A, const double *b, double *x);
 
-inline double *matrix_at(const Matrix *m, size_t i, size_t j) {
+static inline double *matrix_at(const Matrix *m, size_t i, size_t j) {
     return &m->data[i * m->cols + j];
 }
 
-inline const double *matrix_at_const(const Matrix *m, size_t i, size_t j) {
+static inline const double *matrix_at_const(const Matrix *m, size_t i, size_t j) {
     return &m->data[i * m->cols + j];
 }
