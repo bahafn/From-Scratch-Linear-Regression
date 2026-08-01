@@ -4,39 +4,24 @@
 #include "linear_regression.h"
 
 int main() {
-    // double x[8][3] = {
-    //     {2100, 3, 20},
-    //     {1600, 2, 15},
-    //     {2400, 4, 25},
-    //     {1400, 2, 10},
-    //     {3000, 5, 30},
-    //     {1800, 3, 18},
-    //     {2600, 4, 22},
-    //     {1200, 1, 8}
-    // };
-    //
-    // double y[] = {
-    //     450000,
-    //     330000,
-    //     520000,
-    //     280000,
-    //     650000,
-    //     390000,
-    //     560000,
-    //     240000
-    // };
-    //
-    // DataSet dataset = create_dataset(8, 3, x, y);
+    DataSet *dataset = read_csv_dataset("test_datasets/winequality-white.csv.txt", 0);
+    if (!dataset) {
+        return 0;
+    }
 
-    DataSet *dataset = read_csv_dataset("test_dataset.csv", 3);
+    Min_Max_Scaler_Set scaler_set = min_max_fit_all(dataset);
+    min_max_transform(dataset, &scaler_set);
 
     Linear_Regression_Model model = train_model(dataset);
     print_model(&model);
 
-    double x_predict[] = { 2200, 3, 21 };
+    double x_predict[] = { 6.5,0.24,0.19,1.2,0.041,30,111,0.99254,2.99,0.46,9.4,6 };
+    min_max_transform_row(x_predict, &scaler_set);
+
     printf("Price estimated: %f\n", predict(x_predict, &model));
 
     destroy_dataset(dataset);
     free(dataset);
     destroy_model(&model);
+    destroy_scaler_set(&scaler_set);
 }

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <math.h>
 
 DataSet create_dataset(size_t samples, size_t features,
                        double (*feature_matrix)[features],
@@ -31,12 +33,12 @@ void destroy_dataset(DataSet *dataset) {
 
 #define MAX_LINE_LENGTH 65536
 
-// TODO: This currently reads the file twice to get the number of rows and cols 
+// TODO: This currently reads the file twice to get the number of rows and cols
 //       and then adds the data. Check if there is a better way.
 DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
     FILE *file = fopen(file_path, "r");
     if (!file) {
-        fprintf(stderr, "Failed to open file at %s", file_path);
+        fprintf(stderr, "Failed to open file at %s\n", file_path);
         return NULL;
     }
 
@@ -88,6 +90,94 @@ DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
 
     fclose(file);
     return dataset;
+}
+
+Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
+                               size_t column_count,
+                               const size_t columns[]) {
+
+    const Matrix *feature_matrix = &dataset->feature_matrix;
+
+    size_t rows = feature_matrix->rows;
+    size_t cols = feature_matrix->cols;
+
+    Min_Max_Scaler_Set scaler_set;
+    scaler_set.scaler_count = column_count;
+    scaler_set.scalers      = malloc(column_count * sizeof(*scaler_set.scalers));
+
+    if (!scaler_set.scalers) {
+        scaler_set.scaler_count = 0;
+        return scaler_set;
+    }
+
+    for (size_t i = 0; i < column_count; i++) {
+        size_t col = columns ? columns[i] : i;
+
+        double col_max = -INFINITY;
+        double col_min = INFINITY;
+
+        for (size_t row = 0; row < rows; row++) {
+            double value = feature_matrix->data[row * cols + col];
+
+            if (value < col_min) {
+                col_min = value;
+            }
+            if (value > col_max) {
+                col_max = value;
+            }
+        }
+
+        Min_Max_Scaler scaler = {
+            .min_value    = col_min,
+            .max_value    = col_max,
+            .col_index = col
+        };
+        scaler_set.scalers[i] = scaler;
+    }
+
+    return scaler_set;
+}
+
+void min_max_transform(DataSet *dataset, Min_Max_Scaler_Set *scaler_set) {
+    Matrix *matrix = &dataset->feature_matrix;
+
+    size_t rows = matrix->rows;
+    size_t cols = matrix->cols;
+
+    for (size_t i = 0; i < scaler_set->scaler_count; i++) {
+        Min_Max_Scaler *scaler = &scaler_set->scalers[i];
+
+        size_t col   = scaler->col_index;
+        double range = scaler->max_value - scaler->min_value;
+        for (size_t row = 0; row < rows; row++) {
+            size_t index = row * cols + col;
+
+            if (scaler->min_value == scaler->max_value) {
+                matrix->data[index] = 0;
+            } else {
+                matrix->data[index] = (matrix->data[index] - scaler->min_value) / range;
+            }
+        }
+    }
+}
+
+void min_max_transform_row(double *row, Min_Max_Scaler_Set *scaler_set) {
+    for (size_t i = 0; i < scaler_set->scaler_count; i++) {
+        Min_Max_Scaler *scaler = &scaler_set->scalers[i];
+
+        size_t col   = scaler->col_index;
+        double range = scaler->max_value - scaler->min_value;
+
+        if (scaler->min_value == scaler->max_value) {
+            row[col] = 0;
+        } else {
+            row[col] = (row[col] - scaler->min_value) / range;
+        }
+    }
+}
+
+void destroy_scaler_set(Min_Max_Scaler_Set *scaler_set) {
+    free(scaler_set->scalers);
 }
 
 static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) {
