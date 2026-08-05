@@ -1,4 +1,5 @@
 #include "linear_regression.h"
+#include "string_utils.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -77,9 +78,9 @@ DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
         for (size_t col = 0; col <= file_cols; col++) {
             if (col != target_column_index) {
                 // NOTE: Currently we assume everything in the file is a number, will change later.
-                dataset->feature_matrix.data[dataset_index++] = strtod(token, NULL);
+                dataset->feature_matrix.data[dataset_index++] = string_to_double(token);
             } else {
-                dataset->target_vector[row] = strtod(token, NULL);
+                dataset->target_vector[row] = string_to_double(token);
             }
 
             token = strtok(NULL, ",");
@@ -101,6 +102,10 @@ Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
     size_t rows = feature_matrix->rows;
     size_t cols = feature_matrix->cols;
 
+    if (!columns) {
+        column_count = cols;
+    }
+
     Min_Max_Scaler_Set scaler_set;
     scaler_set.scaler_count = column_count;
     scaler_set.scalers      = malloc(column_count * sizeof(*scaler_set.scalers));
@@ -110,58 +115,107 @@ Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
         return scaler_set;
     }
 
-    for (size_t i = 0; i < column_count; i++) {
-        size_t col = columns ? columns[i] : i;
-
-        double col_max = -INFINITY;
-        double col_min = INFINITY;
-
-        for (size_t row = 0; row < rows; row++) {
-            double value = feature_matrix->data[row * cols + col];
-
-            if (value < col_min) {
-                col_min = value;
-            }
-            if (value > col_max) {
-                col_max = value;
-            }
+    // All columns
+    if (!columns) {
+        // Loop over first row and all column scalers to init them
+        for (size_t i = 0; i < cols; i++) {
+            scaler_set.scalers[i].col_index = i;
+            scaler_set.scalers[i].min_value = feature_matrix->data[i];
+            scaler_set.scalers[i].max_value = feature_matrix->data[i];
         }
 
-        Min_Max_Scaler scaler = {
-            .min_value    = col_min,
-            .max_value    = col_max,
-            .col_index = col
-        };
-        scaler_set.scalers[i] = scaler;
+        for (size_t row = 1; row < rows; row++) {
+            size_t base = row * cols;
+
+            for (size_t col = 0; col < cols; col++) {
+                double value = feature_matrix->data[base + col];
+
+                Min_Max_Scaler *scaler = &scaler_set.scalers[col];
+
+                if (value < scaler->min_value) {
+                    scaler->min_value = value;
+                } else if (value > scaler->max_value) {
+                    scaler->max_value = value;
+                }
+            }
+        }
+    } else { // Selected columns
+        for (size_t i = 0; i < column_count; i++) {
+            size_t col = columns ? columns[i] : i;
+
+            double col_max = -INFINITY;
+            double col_min =  INFINITY;
+
+            size_t index = col;
+            for (size_t row = 0; row < rows; row++) {
+                double value = feature_matrix->data[index];
+                index += cols;
+
+                if (value < col_min) {
+                    col_min = value;
+                } else if (value > col_max) {
+                    col_max = value;
+                }
+            }
+
+            scaler_set.scalers[i].min_value = col_min;
+            scaler_set.scalers[i].max_value = col_max;
+            scaler_set.scalers[i].col_index = col;
+        }
     }
 
     return scaler_set;
 }
 
-void min_max_transform(DataSet *dataset, Min_Max_Scaler_Set *scaler_set) {
+
+Min_Max_Scaler_Set min_max_fit_all(const DataSet *dataset) {
+    return min_max_fit(dataset, dataset->feature_matrix.cols, NULL);
+}
+
+void min_max_transform(DataSet *dataset, const Min_Max_Scaler_Set *scaler_set) {
     Matrix *matrix = &dataset->feature_matrix;
 
     size_t rows = matrix->rows;
     size_t cols = matrix->cols;
 
-    for (size_t i = 0; i < scaler_set->scaler_count; i++) {
-        Min_Max_Scaler *scaler = &scaler_set->scalers[i];
-
-        size_t col   = scaler->col_index;
-        double range = scaler->max_value - scaler->min_value;
+    // All columns
+    if (scaler_set->scaler_count == matrix->cols) {
         for (size_t row = 0; row < rows; row++) {
-            size_t index = row * cols + col;
+            size_t base = row * cols;
 
-            if (scaler->min_value == scaler->max_value) {
-                matrix->data[index] = 0;
-            } else {
-                matrix->data[index] = (matrix->data[index] - scaler->min_value) / range;
+            for (size_t col = 0; col < cols; col++) {
+                const Min_Max_Scaler *scaler = &scaler_set->scalers[col];
+
+                double range = scaler->max_value - scaler->min_value;
+
+                if (range == 0) {
+                    matrix->data[base + col] = 0;
+                } else  {
+                    matrix->data[base + col] = (matrix->data[base + col] - scaler->min_value) / range;
+                }
+            }
+        }
+    } else {
+        for (size_t i = 0; i < scaler_set->scaler_count; i++) {
+            const Min_Max_Scaler *scaler = &scaler_set->scalers[i];
+
+            size_t col   = scaler->col_index;
+            double range = scaler->max_value - scaler->min_value;
+            size_t index = col;
+            for (size_t row = 0; row < rows; row++) {
+                if (range == 0) {
+                    matrix->data[index] = 0;
+                } else {
+                    matrix->data[index] = (matrix->data[index] - scaler->min_value) / range;
+                }
+
+                index += cols;
             }
         }
     }
 }
 
-void min_max_transform_row(double *row, Min_Max_Scaler_Set *scaler_set) {
+void min_max_transform_row(double *row, const Min_Max_Scaler_Set *scaler_set) {
     for (size_t i = 0; i < scaler_set->scaler_count; i++) {
         Min_Max_Scaler *scaler = &scaler_set->scalers[i];
 

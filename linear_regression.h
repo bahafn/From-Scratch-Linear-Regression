@@ -1,6 +1,6 @@
-#include "matrix.h"
+#pragma once
 
-#include <stddef.h>
+#include "matrix.h"
 
 typedef struct {
     double *target_vector;
@@ -28,13 +28,10 @@ typedef struct {
 Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
                                size_t column_count,
                                const size_t columns[]);
+Min_Max_Scaler_Set min_max_fit_all(const DataSet *dataset);
 
-static inline Min_Max_Scaler_Set min_max_fit_all(const DataSet *dataset) {
-    return min_max_fit(dataset, dataset->feature_matrix.cols, NULL);
-}
-
-void min_max_transform(DataSet *dataset, Min_Max_Scaler_Set *scaler_set);
-void min_max_transform_row(double *row, Min_Max_Scaler_Set *scaler_set);
+void min_max_transform(DataSet *dataset, const Min_Max_Scaler_Set *scaler_set);
+void min_max_transform_row(double *row, const Min_Max_Scaler_Set *scaler_set);
 
 void destroy_scaler_set(Min_Max_Scaler_Set *scaler_set);
 

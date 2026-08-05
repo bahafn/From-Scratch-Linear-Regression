@@ -9,6 +9,8 @@ int main() {
         return 0;
     }
 
+    // size_t cols[] = { 0, 4, 6, 10, 12, 51, 13, 20, 21, 13 };
+    // Min_Max_Scaler_Set scaler_set = min_max_fit(dataset, 3, cols);
     Min_Max_Scaler_Set scaler_set = min_max_fit_all(dataset);
     min_max_transform(dataset, &scaler_set);
 
@@ -24,4 +26,6 @@ int main() {
     free(dataset);
     destroy_model(&model);
     destroy_scaler_set(&scaler_set);
+
+    return 0;
 }
