@@ -1,2 +1,4 @@
 regression*
 test_datasets/YearPredictionMSD.txt
+massif.out.*
+test_datasets/int_dataset.txt

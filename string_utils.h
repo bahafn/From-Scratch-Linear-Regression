@@ -39,6 +39,10 @@ static inline int starts_with_ignore_case(const char *str, const char *prefix) {
 }
 
 static inline double string_to_double(const char *str) {
+    if (!str) {
+        return NAN;
+    }
+
     const char *p = str;
 
     // Skip spaces

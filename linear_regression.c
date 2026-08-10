@@ -1,5 +1,6 @@
 #include "linear_regression.h"
 #include "string_utils.h"
+#include "dynamic_array.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -34,60 +35,86 @@ void destroy_dataset(DataSet *dataset) {
 
 #define MAX_LINE_LENGTH 65536
 
-// TODO: This currently reads the file twice to get the number of rows and cols
-//       and then adds the data. Check if there is a better way.
 DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
-    FILE *file = fopen(file_path, "r");
+    FILE *file = fopen(file_path, "rb");
     if (!file) {
-        fprintf(stderr, "Failed to open file at %s\n", file_path);
+        fprintf(stderr, "Failed to open file: %s\n", file_path);
         return NULL;
     }
 
+    if (fseek(file, 0, SEEK_END)) {
+        fprintf(stderr, "Failed to read file: %s\n", file_path);
+        fclose(file);
+        return NULL;
+    }
+
+    size_t file_size = ftell(file);
+
+    // Average number of double entries in a file of this size
+    // The max number is the same as file_size (all entires empty, just commas)
+    // The max number for a full file is file_size / 2 (one digit for each and a comma or endline)
+    // We assume that the average entry would have about 3 digits
+    size_t estimated_entries = file_size / 4;
+    double_da data;
+    da_init(data, estimated_entries);
+
+    // Restart from the beginning of the file
+    rewind(file);
     char line_buffer[MAX_LINE_LENGTH];
-    size_t file_rows = 0;
-    size_t file_cols = 0;
+
+    size_t rows = 0;
+    size_t cols = 0;
+
+    // Used because we don't want to allocate the target vector until we estimate how many rows are there.
+    double first_in_target_vector = 0;
 
     // Count number of cols from the first line
     if (fgets(line_buffer, sizeof(line_buffer), file)) {
-        file_rows++;
+        rows++;
 
-        char *ptr = line_buffer;
-        while (*ptr) {
-            if (*ptr == ',') {
-                file_cols++;
+        char *token = strtok(line_buffer, ",");
+        while (token) {
+            cols++;
+
+            if (cols - 1 != target_column_index) {
+                da_append(data, string_to_double(token));
+            } else {
+                first_in_target_vector = string_to_double(token);
             }
 
-            ptr++;
+            token = strtok(NULL, ",");
         }
     }
 
-    // Count number of rows in first pass
-    while (fgets(line_buffer, sizeof(line_buffer), file)) {
-        file_rows++;
-    }
+    // Currently has the estimated number of rows depending on the estimated_entries and cols
+    double_da target_vector;
+    da_init(target_vector, estimated_entries / cols);
+    da_append(target_vector, first_in_target_vector);
 
-    rewind(file);
-    DataSet *dataset = malloc(sizeof(DataSet));
-    init_dataset(dataset, file_rows, file_cols);
-
-    size_t row = 0;
-    size_t dataset_index = 0;
     while (fgets(line_buffer, sizeof(line_buffer), file)) {
         char *token = strtok(line_buffer, ",");
 
-        for (size_t col = 0; col <= file_cols; col++) {
+        for (size_t col = 0; col < cols; col++) {
             if (col != target_column_index) {
-                // NOTE: Currently we assume everything in the file is a number, will change later.
-                dataset->feature_matrix.data[dataset_index++] = string_to_double(token);
+                da_append(data, string_to_double(token));
             } else {
-                dataset->target_vector[row] = string_to_double(token);
+                da_append(target_vector, string_to_double(token));
             }
 
             token = strtok(NULL, ",");
         }
 
-        row++;
+        rows++;
     }
+
+    da_resize(data, rows * (cols - 1));
+    da_resize(target_vector, rows);
+
+    DataSet *dataset = malloc(sizeof(DataSet));
+    dataset->target_vector       = target_vector.items;
+    dataset->feature_matrix.rows = rows;
+    dataset->feature_matrix.cols = cols - 1; // - 1 because we counted the target_vector
+    dataset->feature_matrix.data = data.items;
 
     fclose(file);
     return dataset;
