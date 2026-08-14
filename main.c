@@ -1,26 +1,32 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "linear_regression.h"
 
 int main() {
-    DataSet *dataset = read_csv_dataset("test_datasets/winequality-white.csv.txt", 0);
+    DataSet *dataset = read_csv_dataset("test_datasets/test_dataset_2.csv", 0);
     if (!dataset) {
         return 0;
     }
 
+    Split_DataSet split_dataset = train_test_split(dataset, 0.2, 42);
+
     // size_t cols[] = { 0, 4, 6, 10, 12, 51, 13, 20, 21, 13 };
     // Min_Max_Scaler_Set scaler_set = min_max_fit(dataset, 3, cols);
-    Min_Max_Scaler_Set scaler_set = min_max_fit_all(dataset);
-    min_max_transform(dataset, &scaler_set);
+    Min_Max_Scaler_Set scaler_set = min_max_fit_all(&split_dataset.train);
+    min_max_transform(&split_dataset.train, &scaler_set);
+    min_max_transform(&split_dataset.test,  &scaler_set);
 
-    Linear_Regression_Model model = train_model(dataset);
+    Linear_Regression_Model model = train_model(&split_dataset.train);
     print_model(&model);
 
-    double x_predict[] = { 6.5,0.24,0.19,1.2,0.041,30,111,0.99254,2.99,0.46,9.4,6 };
-    min_max_transform_row(x_predict, &scaler_set);
+    double *y_pred = predict_matrix(&split_dataset.test.feature_matrix, &model);
+    Linear_Regression_Metrics metrics = calculate_linear_regression_metrics(
+        y_pred,
+        split_dataset.test.target_vector,
+        split_dataset.test.feature_matrix.rows
+    );
 
-    printf("Price estimated: %f\n", predict(x_predict, &model));
+    print_linear_regression_metrics(&metrics);
 
     destroy_dataset(dataset);
     free(dataset);

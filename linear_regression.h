@@ -7,12 +7,20 @@ typedef struct {
     Matrix  feature_matrix;
 } DataSet;
 
+DataSet create_empty_dataset(size_t samples, size_t features);
 DataSet create_dataset(size_t samples, size_t features,
                        double (*feature_matrix)[features],
                        double *target_vector);
 void     init_dataset(DataSet *dataset, size_t samples, size_t features);
 void     destroy_dataset(DataSet *dataset);
 DataSet *read_csv_dataset(const char *file_path, size_t target_column_index);
+
+typedef struct {
+    DataSet train;
+    DataSet test;
+} Split_DataSet;
+
+Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_state);
 
 typedef struct {
     double min_value;
@@ -43,6 +51,30 @@ typedef struct {
 
 Linear_Regression_Model train_model(const DataSet *dataset);
 double predict(const double *x, const Linear_Regression_Model *model);
+double *predict_matrix(const Matrix *feature_matrix, const Linear_Regression_Model *model);
 
 void print_model(Linear_Regression_Model *model);
 void destroy_model(Linear_Regression_Model *model);
+
+typedef struct {
+    double mae;
+    double mse;
+    double rmse;
+    double r2;
+    double mape;
+} Linear_Regression_Metrics;
+
+double calculate_mae(const double *y_pred, const double *y_true, size_t n);
+double calculate_mse(const double *y_pred, const double *y_true, size_t n);
+double calculate_rmse(const double *y_pred, const double *y_true, size_t n);
+double calculate_mape(const double *y_pred, const double *y_true, size_t n);
+double calculate_r2(const double *y_pred, const double *y_true, size_t n);
+
+Linear_Regression_Metrics calculate_linear_regression_metrics(
+    const double *y_pred, 
+    const double *y_true, 
+    size_t n
+);
+
+void print_linear_regression_metrics(const Linear_Regression_Metrics *metrics);
+

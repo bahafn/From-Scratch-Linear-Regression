@@ -1,4 +1,5 @@
 #include "linear_regression.h"
+#include "matrix.h"
 #include "string_utils.h"
 #include "dynamic_array.h"
 
@@ -7,6 +8,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+
+DataSet create_empty_dataset(size_t samples, size_t features) {
+    DataSet dataset;
+
+    dataset.feature_matrix = create_empty_matrix(samples, features);
+    dataset.target_vector  = malloc(sizeof(*dataset.target_vector) * samples);
+
+    return dataset;
+}
 
 DataSet create_dataset(size_t samples, size_t features,
                        double (*feature_matrix)[features],
@@ -118,6 +128,68 @@ DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
 
     fclose(file);
     return dataset;
+}
+
+static void shuffle_indices(size_t n, size_t *indices) {
+    for (size_t i = n; i > 1; i--) {
+        size_t j = rand() % i;
+
+        size_t temp = indices[i - 1];
+        indices[i - 1] = indices[j];
+        indices[j] = temp;
+    }
+}
+
+Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_state) {
+    assert(test_ratio > 0 && test_ratio < 1 && "test_ratio must be between 0 and 1");
+
+    srand(random_state);
+
+    // TODO: Check if we want to use ceiling or something like that
+    size_t test_rows  = dataset->feature_matrix.rows * test_ratio;
+    size_t train_rows = dataset->feature_matrix.rows - test_rows;
+
+    size_t samples  = dataset->feature_matrix.rows;
+    size_t features = dataset->feature_matrix.cols;
+
+    DataSet train = create_empty_dataset(train_rows, features);
+    DataSet test  = create_empty_dataset(test_rows,  features);
+
+    size_t *indices = malloc(sizeof(*indices) * samples);
+    for (size_t i = 0; i < samples; i++) {
+        indices[i] = i;
+    }
+
+    shuffle_indices(samples, indices);
+
+    // Add first test_ratio percent rows to test dataset
+    for (size_t i = 0; i < test_rows; i++) {
+        size_t row_index = indices[i];
+
+        memcpy(test.feature_matrix.data + i * features,
+               dataset->feature_matrix.data + row_index * features,
+               features * sizeof(double));
+        test.target_vector[i] = dataset->target_vector[row_index];
+    }
+
+    // Add rest of rows to train dataset
+    for (size_t i = test_rows; i < samples; i++) {
+        size_t train_index = i - test_rows;
+        size_t row_index = indices[i];
+
+        memcpy(train.feature_matrix.data + train_index * features,
+               dataset->feature_matrix.data + row_index * features,
+               features * sizeof(double));
+        train.target_vector[train_index] = dataset->target_vector[row_index];
+    }
+
+    free(indices);
+
+    Split_DataSet split_dataset = {
+        .train = train,
+        .test  = test
+    };
+    return split_dataset;
 }
 
 Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
@@ -326,6 +398,125 @@ double predict(const double *x, const Linear_Regression_Model *model) {
     }
 
     return result;
+}
+
+// TODO: Better name for this
+double *predict_matrix(const Matrix *feature_matrix, const Linear_Regression_Model *model) {
+    double *result = malloc(feature_matrix->rows * sizeof(*result));
+
+    for (size_t i = 0; i < feature_matrix->rows; i++) {
+        result[i] = predict(feature_matrix->data + i * feature_matrix->cols, model);
+    }
+
+    return result;
+}
+
+static double calculate_error(const double *y_pred,
+                              const double *y_true,
+                              size_t n,
+                              double (*transform)(double)) {
+
+    if (n == 0) {
+        return 0;
+    }
+
+    double error = 0;
+    for (size_t i = 0; i < n; i++) {
+        double diff = y_true[i] - y_pred[i];
+        error += transform(diff);
+    }
+
+    return error / n;
+}
+
+double calculate_mae(const double *y_pred, const double *y_true, size_t n) {
+    return calculate_error(y_pred, y_true, n, fabs);
+}
+
+// Used as the function pointer in calculate_mse
+static double squared_error(double error) {
+    return error * error;
+}
+
+double calculate_mse(const double *y_pred, const double *y_true, size_t n) {
+    return calculate_error(y_pred, y_true, n, squared_error);
+}
+
+double calculate_rmse(const double *y_pred, const double *y_true, size_t n) {
+    return sqrt(calculate_mse(y_pred, y_true, n));
+}
+
+// NOTE: This implementation skips any difference value equaled to zero
+double calculate_mape(const double *y_pred, const double *y_true, size_t n) {
+    double error = 0.0;
+    size_t count = 0;
+
+    for (size_t i = 0; i < n; i++) {
+        if (y_true[i] == 0.0) {
+            continue;
+        }
+
+        error += fabs((y_true[i] - y_pred[i]) / y_true[i]);
+        count++;
+    }
+
+    return count == 0 ? 0.0 : (error / count) * 100.0;
+}
+
+double calculate_r2(const double *y_pred, const double *y_true, size_t n) {
+    if (n == 0) {
+        return 0.0;
+    }
+
+    double mean = 0.0;
+
+    for (size_t i = 0; i < n; i++) {
+        mean += y_true[i];
+    }
+
+    mean /= n;
+
+    double ss_res = 0.0;
+    double ss_tot = 0.0;
+
+    for (size_t i = 0; i < n; i++) {
+        double residual  = y_true[i] - y_pred[i];
+        double deviation = y_true[i] - mean;
+
+        ss_res += residual * residual;
+        ss_tot += deviation * deviation;
+    }
+
+    if (ss_tot == 0.0) {
+        return 0.0;
+    }
+
+    return 1.0 - (ss_res / ss_tot);
+}
+
+Linear_Regression_Metrics calculate_linear_regression_metrics(
+    const double *y_pred,
+    const double *y_true,
+    size_t n
+) {
+
+    Linear_Regression_Metrics metrics;
+
+    metrics.mae  = calculate_mae(y_pred, y_true, n);
+    metrics.mse  = calculate_mse(y_pred, y_true, n);
+    metrics.rmse = sqrt(metrics.mse);
+    metrics.r2   = calculate_r2(y_pred, y_true, n);
+    metrics.mape = calculate_mape(y_pred, y_true, n);
+
+    return metrics;
+}
+
+void print_linear_regression_metrics(const Linear_Regression_Metrics *metrics) {
+    printf("MAE  = %f\n", metrics->mae);
+    printf("MSE  = %f\n", metrics->mse);
+    printf("RMSE = %f\n", metrics->rmse);
+    printf("R2   = %f\n", metrics->r2);
+    printf("MAPE = %f\n", metrics->mape);
 }
 
 void print_model(Linear_Regression_Model *model) {
