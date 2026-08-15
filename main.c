@@ -3,12 +3,12 @@
 #include "linear_regression.h"
 
 int main() {
-    DataSet *dataset = read_csv_dataset("test_datasets/YearPredictionMSD.txt", 0);
+    Dataset *dataset = read_csv_dataset("test_datasets/YearPredictionMSD.txt", 0);
     if (!dataset) {
         return 0;
     }
 
-    Split_DataSet split_dataset = train_test_split(dataset, 0.2, 42);
+    Split_Dataset split_dataset = train_test_split(dataset, 0.2, 42);
     destroy_dataset(dataset);
     free(dataset);
 

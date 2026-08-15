@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <math.h>
 
-DataSet create_empty_dataset(size_t samples, size_t features) {
-    DataSet dataset;
+Dataset create_empty_dataset(size_t samples, size_t features) {
+    Dataset dataset;
 
     dataset.feature_matrix = create_empty_matrix(samples, features);
     dataset.target_vector  = malloc(sizeof(*dataset.target_vector) * samples);
@@ -18,11 +18,11 @@ DataSet create_empty_dataset(size_t samples, size_t features) {
     return dataset;
 }
 
-DataSet create_dataset(size_t samples, size_t features,
+Dataset create_dataset(size_t samples, size_t features,
                        double (*feature_matrix)[features],
                        double *target_vector) {
 
-    DataSet dataset;
+    Dataset dataset;
 
     dataset.feature_matrix = create_matrix(samples, features, feature_matrix);
     dataset.target_vector  = target_vector;
@@ -30,12 +30,12 @@ DataSet create_dataset(size_t samples, size_t features,
     return dataset;
 }
 
-void init_dataset(DataSet *dataset, size_t samples, size_t features) {
+void init_dataset(Dataset *dataset, size_t samples, size_t features) {
     dataset->feature_matrix = create_empty_matrix(samples, features);
     dataset->target_vector  = malloc(samples * sizeof(*dataset->target_vector));
 }
 
-void destroy_dataset(DataSet *dataset) {
+void destroy_dataset(Dataset *dataset) {
     if (dataset) {
         destroy_matrix(&dataset->feature_matrix);
         free(dataset->target_vector);
@@ -45,7 +45,7 @@ void destroy_dataset(DataSet *dataset) {
 
 #define MAX_LINE_LENGTH 65536
 
-DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
+Dataset *read_csv_dataset(const char *file_path, size_t target_column_index) {
     FILE *file = fopen(file_path, "rb");
     if (!file) {
         fprintf(stderr, "Failed to open file: %s\n", file_path);
@@ -120,7 +120,7 @@ DataSet *read_csv_dataset(const char *file_path, size_t target_column_index) {
     da_resize(data, rows * (cols - 1));
     da_resize(target_vector, rows);
 
-    DataSet *dataset = malloc(sizeof(DataSet));
+    Dataset *dataset = malloc(sizeof(Dataset));
     dataset->target_vector       = target_vector.items;
     dataset->feature_matrix.rows = rows;
     dataset->feature_matrix.cols = cols - 1; // - 1 because we counted the target_vector
@@ -140,7 +140,7 @@ static void shuffle_indices(size_t n, size_t *indices) {
     }
 }
 
-Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_state) {
+Split_Dataset train_test_split(Dataset *dataset, double test_ratio, int random_state) {
     assert(test_ratio > 0 && test_ratio < 1 && "test_ratio must be between 0 and 1");
 
     srand(random_state);
@@ -151,8 +151,8 @@ Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_s
     size_t samples  = dataset->feature_matrix.rows;
     size_t features = dataset->feature_matrix.cols;
 
-    DataSet train = create_empty_dataset(train_rows, features);
-    DataSet test  = create_empty_dataset(test_rows,  features);
+    Dataset train = create_empty_dataset(train_rows, features);
+    Dataset test  = create_empty_dataset(test_rows,  features);
 
     size_t *indices = malloc(sizeof(*indices) * samples);
     for (size_t i = 0; i < samples; i++) {
@@ -184,19 +184,19 @@ Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_s
 
     free(indices);
 
-    Split_DataSet split_dataset = {
+    Split_Dataset split_dataset = {
         .train = train,
         .test  = test
     };
     return split_dataset;
 }
 
-void destroy_split_dataset(Split_DataSet *split_dataset) {
+void destroy_split_dataset(Split_Dataset *split_dataset) {
     destroy_dataset(&split_dataset->train);
     destroy_dataset(&split_dataset->test);
 }
 
-Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
+Min_Max_Scaler_Set min_max_fit(const Dataset *dataset,
                                size_t column_count,
                                const size_t columns[]) {
 
@@ -271,11 +271,11 @@ Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
 }
 
 
-Min_Max_Scaler_Set min_max_fit_all(const DataSet *dataset) {
+Min_Max_Scaler_Set min_max_fit_all(const Dataset *dataset) {
     return min_max_fit(dataset, dataset->feature_matrix.cols, NULL);
 }
 
-void min_max_transform(DataSet *dataset, const Min_Max_Scaler_Set *scaler_set) {
+void min_max_transform(Dataset *dataset, const Min_Max_Scaler_Set *scaler_set) {
     Matrix *matrix = &dataset->feature_matrix;
 
     size_t rows = matrix->rows;
@@ -337,7 +337,7 @@ void destroy_scaler_set(Min_Max_Scaler_Set *scaler_set) {
     free(scaler_set->scalers);
 }
 
-static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) {
+static void build_normal_equation(const Dataset *dataset, Matrix *a, double *b) {
     size_t rows = dataset->feature_matrix.rows;
     size_t cols = dataset->feature_matrix.cols;
 
@@ -366,7 +366,7 @@ static void build_normal_equation(const DataSet *dataset, Matrix *a, double *b) 
     }
 }
 
-Linear_Regression_Model train_model(const DataSet *dataset) {
+Linear_Regression_Model train_model(const Dataset *dataset) {
     Linear_Regression_Model model;
 
     size_t cols = dataset->feature_matrix.cols;
@@ -404,7 +404,6 @@ double predict(const double *x, const Linear_Regression_Model *model) {
     return result;
 }
 
-// TODO: Better name for this
 double *predict_all(const Matrix *feature_matrix, const Linear_Regression_Model *model) {
     double *result = malloc(feature_matrix->rows * sizeof(*result));
 
