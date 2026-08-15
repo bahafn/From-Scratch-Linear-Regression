@@ -145,8 +145,7 @@ Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_s
 
     srand(random_state);
 
-    // TODO: Check if we want to use ceiling or something like that
-    size_t test_rows  = dataset->feature_matrix.rows * test_ratio;
+    size_t test_rows  = round(dataset->feature_matrix.rows * test_ratio);
     size_t train_rows = dataset->feature_matrix.rows - test_rows;
 
     size_t samples  = dataset->feature_matrix.rows;
@@ -190,6 +189,11 @@ Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_s
         .test  = test
     };
     return split_dataset;
+}
+
+void destroy_split_dataset(Split_DataSet *split_dataset) {
+    destroy_dataset(&split_dataset->train);
+    destroy_dataset(&split_dataset->test);
 }
 
 Min_Max_Scaler_Set min_max_fit(const DataSet *dataset,
@@ -401,7 +405,7 @@ double predict(const double *x, const Linear_Regression_Model *model) {
 }
 
 // TODO: Better name for this
-double *predict_matrix(const Matrix *feature_matrix, const Linear_Regression_Model *model) {
+double *predict_all(const Matrix *feature_matrix, const Linear_Regression_Model *model) {
     double *result = malloc(feature_matrix->rows * sizeof(*result));
 
     for (size_t i = 0; i < feature_matrix->rows; i++) {

@@ -21,6 +21,7 @@ typedef struct {
 } Split_DataSet;
 
 Split_DataSet train_test_split(DataSet *dataset, double test_ratio, int random_state);
+void destroy_split_dataset(Split_DataSet *split_dataset);
 
 typedef struct {
     double min_value;
@@ -50,8 +51,8 @@ typedef struct {
 } Linear_Regression_Model;
 
 Linear_Regression_Model train_model(const DataSet *dataset);
-double predict(const double *x, const Linear_Regression_Model *model);
-double *predict_matrix(const Matrix *feature_matrix, const Linear_Regression_Model *model);
+double  predict(const double *x, const Linear_Regression_Model *model);
+double *predict_all(const Matrix *feature_matrix, const Linear_Regression_Model *model);
 
 void print_model(Linear_Regression_Model *model);
 void destroy_model(Linear_Regression_Model *model);
@@ -71,10 +72,9 @@ double calculate_mape(const double *y_pred, const double *y_true, size_t n);
 double calculate_r2(const double *y_pred, const double *y_true, size_t n);
 
 Linear_Regression_Metrics calculate_linear_regression_metrics(
-    const double *y_pred, 
-    const double *y_true, 
-    size_t n
+        const double *y_pred,
+        const double *y_true,
+        size_t n
 );
 
 void print_linear_regression_metrics(const Linear_Regression_Metrics *metrics);
-
