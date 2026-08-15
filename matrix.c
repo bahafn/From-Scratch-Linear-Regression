@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO: Fix using asserts for error handling.
-
 Matrix create_empty_matrix(size_t rows, size_t cols) {
     Matrix m;
     m.rows = rows;
@@ -106,17 +104,18 @@ double *matrix_vector_multiply(const Matrix *m, const double *v) {
     return result;
 }
 
-// TODO: Make sure it is the best way to do this in a for loop
 static void matrix_swap_rows(Matrix *m, size_t row1, size_t row2) {
-    if (row1 == row2) {
+    if (row1 == row2)
         return;
-    }
 
-    for (size_t col = 0; col < m->cols; col++) {
-        double temp = *matrix_at(m, row1, col);
-        *matrix_at(m, row1, col) = *matrix_at(m, row2, col);
-        *matrix_at(m, row2, col) = temp;
-    }
+    double *r1 = m->data + row1 * m->cols;
+    double *r2 = m->data + row2 * m->cols;
+
+    double temp[m->cols];
+
+    memcpy(temp, r1, m->cols * sizeof(double));
+    memcpy(r1, r2, m->cols * sizeof(double));
+    memcpy(r2, temp, m->cols * sizeof(double));
 }
 
 bool solve_linear_system(const Matrix *A, const double *b, double *x) {
