@@ -3,7 +3,7 @@
 #include "linear_regression.h"
 
 int main() {
-    Dataset *dataset = read_csv_dataset("test_datasets/YearPredictionMSD.txt", 0);
+    Dataset *dataset = read_csv_dataset("test_datasets/test_dataset_2.csv", 0);
     if (!dataset) {
         return 0;
     }
