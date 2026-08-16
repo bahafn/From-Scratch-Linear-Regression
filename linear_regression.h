@@ -20,7 +20,7 @@ typedef struct {
     Dataset test;
 } Split_Dataset;
 
-Split_Dataset train_test_split(Dataset *dataset, double test_ratio, int random_state);
+Split_Dataset train_test_split(Dataset *dataset, double test_ratio, unsigned int random_state);
 void destroy_split_dataset(Split_Dataset *split_dataset);
 
 typedef struct {

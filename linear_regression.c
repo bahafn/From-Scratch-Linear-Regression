@@ -82,18 +82,28 @@ Dataset *read_csv_dataset(const char *file_path, size_t target_column_index) {
     if (fgets(line_buffer, sizeof(line_buffer), file)) {
         rows++;
 
-        char *token = strtok(line_buffer, ",");
+        char *token = strtok_single(line_buffer, ",");
         while (token) {
             cols++;
 
-            if (cols - 1 != target_column_index) {
-                da_append(data, string_to_double(token));
-            } else {
-                first_in_target_vector = string_to_double(token);
+            double value = string_to_double(token);
+            if (isnan(value)) {
+                fprintf(stderr, "Non double value in dataset: value = %s\n"
+                                "Any results from this dataset should not be trusted.\n", token);
             }
 
-            token = strtok(NULL, ",");
+            if (cols - 1 != target_column_index) {
+                da_append(data, value);
+            } else {
+                first_in_target_vector = value;
+            }
+
+            token = strtok_single(NULL, ",");
         }
+    } else {
+        fprintf(stderr, "File is empty: %s\n", file_path);
+        fclose(file);
+        return NULL;
     }
 
     // Currently has the estimated number of rows depending on the estimated_entries and cols
@@ -102,16 +112,22 @@ Dataset *read_csv_dataset(const char *file_path, size_t target_column_index) {
     da_append(target_vector, first_in_target_vector);
 
     while (fgets(line_buffer, sizeof(line_buffer), file)) {
-        char *token = strtok(line_buffer, ",");
+        char *token = strtok_single(line_buffer, ",");
 
         for (size_t col = 0; col < cols; col++) {
-            if (col != target_column_index) {
-                da_append(data, string_to_double(token));
-            } else {
-                da_append(target_vector, string_to_double(token));
+            double value = string_to_double(token);
+            if (isnan(value)) {
+                fprintf(stderr, "Non double value in dataset: value = %s\n"
+                                "Any results from this dataset should not be trusted.\n", token);
             }
 
-            token = strtok(NULL, ",");
+            if (col != target_column_index) {
+                da_append(data, value);
+            } else {
+                da_append(target_vector, value);
+            }
+
+            token = strtok_single(NULL, ",");
         }
 
         rows++;
@@ -140,7 +156,7 @@ static void shuffle_indices(size_t n, size_t *indices) {
     }
 }
 
-Split_Dataset train_test_split(Dataset *dataset, double test_ratio, int random_state) {
+Split_Dataset train_test_split(Dataset *dataset, double test_ratio, unsigned int random_state) {
     assert(test_ratio > 0 && test_ratio < 1 && "test_ratio must be between 0 and 1");
 
     srand(random_state);
@@ -192,8 +208,10 @@ Split_Dataset train_test_split(Dataset *dataset, double test_ratio, int random_s
 }
 
 void destroy_split_dataset(Split_Dataset *split_dataset) {
-    destroy_dataset(&split_dataset->train);
-    destroy_dataset(&split_dataset->test);
+    if (split_dataset) {
+        destroy_dataset(&split_dataset->train);
+        destroy_dataset(&split_dataset->test);
+    }
 }
 
 Min_Max_Scaler_Set min_max_fit(const Dataset *dataset,
@@ -334,7 +352,9 @@ void min_max_transform_row(double *row, const Min_Max_Scaler_Set *scaler_set) {
 }
 
 void destroy_scaler_set(Min_Max_Scaler_Set *scaler_set) {
-    free(scaler_set->scalers);
+    if (scaler_set) {
+        free(scaler_set->scalers);
+    }
 }
 
 static void build_normal_equation(const Dataset *dataset, Matrix *a, double *b) {
