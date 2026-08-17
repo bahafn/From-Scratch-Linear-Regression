@@ -3,7 +3,7 @@
 #include "linear_regression.h"
 
 int main() {
-    Dataset *dataset = read_csv_dataset("test_datasets/test_dataset_2.csv", 0);
+    Dataset *dataset = read_csv_dataset("test_datasets/YearPredictionMSD.txt", 0);
     if (!dataset) {
         return 0;
     }
@@ -18,7 +18,10 @@ int main() {
     min_max_transform(&split_dataset.train, &scaler_set);
     min_max_transform(&split_dataset.test,  &scaler_set);
 
-    Linear_Regression_Model model = train_model(&split_dataset.train);
+    Linear_Regression_Model model;
+    if (!train_model(&split_dataset.train, &model)) {
+        return 1;
+    }
     print_model(&model);
 
     double *y_pred = predict_all(&split_dataset.test.feature_matrix, &model);

@@ -19,7 +19,7 @@ Dataset create_empty_dataset(size_t samples, size_t features) {
 }
 
 Dataset create_dataset(size_t samples, size_t features,
-                       double (*feature_matrix)[features],
+                       const double (*feature_matrix)[features],
                        double *target_vector) {
 
     Dataset dataset;
@@ -189,8 +189,8 @@ Split_Dataset train_test_split(Dataset *dataset, double test_ratio, unsigned int
 
     // Add rest of rows to train dataset
     for (size_t i = test_rows; i < samples; i++) {
-        size_t train_index = i - test_rows;
-        size_t row_index = indices[i];
+         size_t train_index = i - test_rows;
+         size_t row_index = indices[i];
 
         memcpy(train.feature_matrix.data + train_index * features,
                dataset->feature_matrix.data + row_index * features,
@@ -386,31 +386,31 @@ static void build_normal_equation(const Dataset *dataset, Matrix *a, double *b) 
     }
 }
 
-Linear_Regression_Model train_model(const Dataset *dataset) {
-    Linear_Regression_Model model;
-
+bool train_model(const Dataset *dataset, Linear_Regression_Model *model) {
     size_t cols = dataset->feature_matrix.cols;
 
-    Matrix a = create_empty_matrix(cols + 1, cols + 1);
+    Matrix  a = create_empty_matrix(cols + 1, cols + 1);
     double *b = calloc(cols + 1, sizeof(*b));
 
     build_normal_equation(dataset, &a, b);
 
     double *result_vector = malloc((cols + 1) * sizeof(*result_vector));
     if (!result_vector) {
-        perror("Failed to allocate result_vector array");
-        return model;
+        fprintf(stderr, "Failed to allocate result_vector array\n");
+        return false;
     }
 
-    solve_linear_system(&a, b, result_vector);
+    if (!solve_linear_system(&a, b, result_vector)) {
+        return false;
+    }
 
     destroy_matrix(&a);
     free(b);
 
-    model.parameters = result_vector;
-    model.parameters_count = cols + 1;
+    model->parameters       = result_vector;
+    model->parameters_count = cols + 1;
 
-    return model;
+    return true;
 }
 
 double predict(const double *x, const Linear_Regression_Model *model) {

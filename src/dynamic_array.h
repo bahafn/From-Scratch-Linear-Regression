@@ -13,15 +13,15 @@ typedef struct {
 
 #define da_init(da, init_capacity)                                          \
     BEGIN_MACRO                                                             \
-        da.capacity = init_capacity;                                        \
+        da.capacity = (init_capacity);                                      \
         da.size     = 0;                                                    \
-        da.items    = malloc(init_capacity * sizeof(*da.items));            \
+        da.items    = malloc((init_capacity) * sizeof(*da.items));          \
     END_MACRO
 
 #define da_resize(da, new_size)                                             \
     BEGIN_MACRO                                                             \
-        if (da.size > new_size) da.size = new_size;                         \
-        da.capacity = new_size;                                             \
+        if (da.size > (new_size)) da.size = (new_size);                     \
+        da.capacity = (new_size);                                           \
         da.items    = realloc(da.items, da.capacity * sizeof(*da.items));   \
     END_MACRO
 
@@ -32,5 +32,5 @@ typedef struct {
             else da.capacity *= 1.5;                                        \
             da.items = realloc(da.items, da.capacity * sizeof(*da.items));  \
         }                                                                   \
-        da.items[da.size++] = entry;                                        \
+        da.items[da.size++] = (entry);                                      \
     END_MACRO

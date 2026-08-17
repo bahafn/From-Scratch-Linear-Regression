@@ -9,7 +9,7 @@ typedef struct {
 
 Dataset create_empty_dataset(size_t samples, size_t features);
 Dataset create_dataset(size_t samples, size_t features,
-                       double (*feature_matrix)[features],
+                       const double (*feature_matrix)[features],
                        double *target_vector);
 void     init_dataset(Dataset *dataset, size_t samples, size_t features);
 void     destroy_dataset(Dataset *dataset);
@@ -50,7 +50,7 @@ typedef struct {
     size_t parameters_count;
 } Linear_Regression_Model;
 
-Linear_Regression_Model train_model(const Dataset *dataset);
+bool train_model(const Dataset *dataset, Linear_Regression_Model *model);
 double  predict(const double *x, const Linear_Regression_Model *model);
 double *predict_all(const Matrix *feature_matrix, const Linear_Regression_Model *model);
 

@@ -120,6 +120,7 @@ static void matrix_swap_rows(Matrix *m, size_t row1, size_t row2) {
 
 bool solve_linear_system(const Matrix *A, const double *b, double *x) {
     if (A->rows != A->cols) {
+        fprintf(stderr, "Can't solve linear system: matrix must be square.\n");
         return false;
     }
 
@@ -147,6 +148,7 @@ bool solve_linear_system(const Matrix *A, const double *b, double *x) {
         }
 
         if (fabs(*matrix_at(&aug, pivot, col)) < 1e-12) {
+        fprintf(stderr, "Can't solve linear system: normal equation matrix is singular or nearly singular.\n");
             destroy_matrix(&aug);
             return false;
         }
