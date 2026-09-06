@@ -214,9 +214,9 @@ void destroy_split_dataset(Split_Dataset *split_dataset) {
     }
 }
 
-Min_Max_Scaler_Set min_max_fit(const Dataset *dataset,
-                               size_t column_count,
-                               const size_t columns[]) {
+Min_Max_Scaler_Set _min_max_fit(const Dataset *dataset,
+                                size_t column_count,
+                                const size_t columns[]) {
 
     const Matrix *feature_matrix = &dataset->feature_matrix;
 
@@ -290,7 +290,7 @@ Min_Max_Scaler_Set min_max_fit(const Dataset *dataset,
 
 
 Min_Max_Scaler_Set min_max_fit_all(const Dataset *dataset) {
-    return min_max_fit(dataset, dataset->feature_matrix.cols, NULL);
+    return _min_max_fit(dataset, dataset->feature_matrix.cols, NULL);
 }
 
 void min_max_transform(Dataset *dataset, const Min_Max_Scaler_Set *scaler_set) {

@@ -13,7 +13,8 @@ int main() {
     free(dataset);
 
     // size_t cols[] = { 0, 4, 6, 10, 12, 51, 13, 20, 21, 13 };
-    // Min_Max_Scaler_Set scaler_set = min_max_fit(dataset, 3, cols);
+    // Min_Max_Scaler_Set scaler_set = _min_max_fit(&split_dataset.train, 10, cols);
+    // Min_Max_Scaler_Set scaler_set = min_max_fit(&split_dataset.train, 0, 4, 6, 10, 12, 51, 13, 20, 21, 13);
     Min_Max_Scaler_Set scaler_set = min_max_fit_all(&split_dataset.train);
     min_max_transform(&split_dataset.train, &scaler_set);
     min_max_transform(&split_dataset.test,  &scaler_set);

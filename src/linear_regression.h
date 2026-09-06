@@ -34,9 +34,11 @@ typedef struct {
     Min_Max_Scaler *scalers;
 } Min_Max_Scaler_Set;
 
-Min_Max_Scaler_Set min_max_fit(const Dataset *dataset,
-                               size_t column_count,
-                               const size_t columns[]);
+#define min_max_fit(dataset, ...) _min_max_fit(dataset, sizeof((const size_t[]){__VA_ARGS__}) / sizeof(size_t), (const size_t[]){__VA_ARGS__})
+
+Min_Max_Scaler_Set _min_max_fit(const Dataset *dataset,
+                                size_t column_count,
+                                const size_t columns[]);
 Min_Max_Scaler_Set min_max_fit_all(const Dataset *dataset);
 
 void min_max_transform(Dataset *dataset, const Min_Max_Scaler_Set *scaler_set);
