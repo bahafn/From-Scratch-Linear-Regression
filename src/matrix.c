@@ -11,7 +11,7 @@ Matrix create_empty_matrix(size_t rows, size_t cols) {
     m.rows = rows;
     m.cols = cols;
 
-    m.data = calloc(sizeof(*m.data), rows * cols);
+    m.data = calloc(rows * cols, sizeof(*m.data));
     if (!m.data) {
         m.rows = 0;
         m.cols = 0;
